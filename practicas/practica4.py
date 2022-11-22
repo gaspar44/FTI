@@ -122,26 +122,47 @@ class blockchain_struct():
     def get_blocks(self):
         return self.blocks
 
+class merkle_node():
+    def __init__(self, transaction_hash, father=None, left=None, right=None):
+        self.father = father
+        self.left = left
+        self.right = right
+        self.transaction_hash = transaction_hash
+
 def UAB_create_tree(tx_list):
     n = list(factor(len(tx_list)))[0][1]
     tree = []
 
     for i in range(n + 1):
         tree.append([])
+    merkle_nodes = []
+    for i in range(len(tx_list)):
+        merkle = merkle_node(tx_list[i].transaction_hash)
+        merkle_nodes.append(merkle)
 
-    tree[n] = tx_list
+    tree[n] = merkle_nodes
+
     for i in range(n, 0, -1):
         actual_level = tree[i]
         next_level = []
 
         for j in range(0, len(actual_level), 2):
-            concatenate_hash = UAB_concatenate_ints_as_strings([actual_level[j].transaction_hash, actual_level[j + 1].transaction_hash])
+            left_node = actual_level[j]
+            right_node = actual_level[j + 1]
+
+            concatenate_hash = UAB_concatenate_ints_as_strings([left_node.transaction_hash, right_node.transaction_hash])
             new_hash = UAB_btc_hash(concatenate_hash)
-            next_level.append(transaction_struct(new_hash))
+
+            merkle_father = merkle_node(new_hash, father=None, left=left_node, right=right_node)
+            left_node.parent, right_node.parent = merkle_father, merkle_father
+
+            next_level.append(merkle_father)
 
         tree[i - 1] = next_level
 
     return tree
+
+
 
 def UAB_compute_merkle_root(tx_list):
     actual_list = tx_list
