@@ -122,13 +122,84 @@ class blockchain_struct():
     def get_blocks(self):
         return self.blocks
 
+def UAB_create_tree(tx_list):
+    n = list(factor(len(tx_list)))[0][1]
+    tree = []
+
+    for i in range(n + 1):
+        tree.append([])
+
+    tree[n] = tx_list
+    for i in range(n, 0, -1):
+        actual_level = tree[i]
+        next_level = []
+
+        for j in range(0, len(actual_level), 2):
+            concatenate_hash = UAB_concatenate_ints_as_strings([actual_level[j].transaction_hash, actual_level[j + 1].transaction_hash])
+            new_hash = UAB_btc_hash(concatenate_hash)
+            next_level.append(transaction_struct(new_hash))
+
+        tree[i - 1] = next_level
+
+    return tree
+
 def UAB_compute_merkle_root(tx_list):
-    n = len(tx_list)
+    actual_list = tx_list
+    n = len(actual_list)
     if n == 0:
-        return transaction_struct(UAB_btc_hash(""))
+        return UAB_btc_hash("")
+
+    elif n == 1:
+        return tx_list[0].transaction_hash
 
     elif n & (n - 1) != 0:
-        print("verga")
+        n = len(actual_list)
+        while n & (n - 1) != 0:
+            actual_list.append(actual_list[n - 1])
+            n = len(actual_list)
 
-    for i in range(pow(2, len(tx_list)) - 1):
-        print(i)
+    return UAB_create_tree(actual_list)[0][0].transaction_hash
+
+def test_case_1a(name, tx_list, exp_merkle):
+    merkle = UAB_compute_merkle_root(tx_list)
+    print("Test", name + ":", merkle == exp_merkle)
+
+
+def first_case():
+    tx1 = transaction_struct("1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464")
+    tx2 = transaction_struct("cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873")
+    tx3 = transaction_struct("6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b")
+    tx4 = transaction_struct("615bdd17c2556f82f384392ea8557f8cc88b03501c759e23093ab0b2a9b5cd48")
+    tx5 = transaction_struct("19581e27de7ced00ff1ce50b2047e7a567c76b1cbaebabe5ef03f7c3017bb5b7")
+    tx6 = transaction_struct("d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35")
+    tx7 = transaction_struct("e5e0093f285a4fb94c3fcc2ad7fd04edd10d429ccda87a9aa5e4718efadf182e")
+    tx8 = transaction_struct("5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9")
+    tx9 = transaction_struct("03b26944890929ff751653acb2f2af795cee38f937f379f52ed654a68ce91216")
+    tx10 = transaction_struct("163f9d874bf45bcce929f64cc69e816219b0f000e374076c1d3efe0a26ca6b6e")
+
+    exp_merkle = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    test_case_1a("1a.1", [], exp_merkle)
+
+    exp_merkle = "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464"
+    test_case_1a("1a.2", [tx1], exp_merkle)
+
+    exp_merkle = "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d"
+    test_case_1a("1a.3", [tx1, tx2], exp_merkle)
+
+    exp_merkle = "1d61fc2b1cb988a0bddd5dc00f942e468c2957f8527a1189b79531b46680d852"
+    test_case_1a("1a.4", [tx1, tx2, tx3, tx4], exp_merkle)
+
+    exp_merkle = "a1095d369acb94778091ceccbb75719ae5f9941107d1f965174c6aebcb48d631"
+    test_case_1a("1a.5", [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8], exp_merkle)
+
+    exp_merkle = "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317"
+    test_case_1a("1a.6", [tx1, tx2, tx3], exp_merkle)
+
+    exp_merkle = "9c7c326461af1854e747665a6c1657248c26cef66680301907952cc7aef43c7d"
+    test_case_1a("1a.7", [tx1, tx2, tx3, tx4, tx5, tx6, tx7], exp_merkle)
+
+    exp_merkle = "0e044c1cf28cb3361dacb8a55275f03963d9a210676e3cae337828751149e494"
+    test_case_1a("1a.8", [tx1, tx2, tx3, tx4, tx5, tx6], exp_merkle)
+
+    exp_merkle = "9bce55c90dbd3c65086549d556feea84f4b022a6e9d9d29824e3daf237656906"
+    test_case_1a("1a.9", [tx1, tx2, tx3, tx4, tx5], exp_merkle)
