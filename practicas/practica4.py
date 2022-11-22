@@ -162,6 +162,27 @@ def UAB_create_tree(tx_list):
 
     return tree[0][0]
 
+
+def UAB_validate_inclusion_simplified(tx, merkle_root, merkle_path):
+    if len(merkle_path) == 0:
+        return merkle_root == tx.transaction_hash
+
+    start_node = merkle_node(tx.transaction_hash)
+
+    for element in merkle_path:
+        new_node = merkle_node(element[1])
+        if element[0] == 0:
+            message = UAB_btc_hash(UAB_concatenate_ints_as_strings([start_node.transaction_hash, new_node.transaction_hash]))
+            parent_node = merkle_node(message, left=start_node, right=new_node)
+
+        else:
+            message = UAB_btc_hash(UAB_concatenate_ints_as_strings([new_node.transaction_hash, start_node.transaction_hash]))
+            parent_node = merkle_node(message, left=new_node, right=start_node)
+
+        start_node.father, new_node.father = parent_node, parent_node
+        start_node = parent_node
+
+    return start_node.transaction_hash == merkle_root
 def UAB_compute_merkle_root(tx_list):
     actual_list = tx_list
     n = len(actual_list)
@@ -183,6 +204,10 @@ def test_case_1a(name, tx_list, exp_merkle):
     merkle = UAB_compute_merkle_root(tx_list)
     print("Test", name + ":", merkle == exp_merkle)
 
+def test_case_1b(name, tx, merkle_root, merkle_path, exp_result):
+    r = UAB_validate_inclusion_simplified(tx, merkle_root, merkle_path)
+    print("Test", name + ":", r == exp_result)
+
 
 tx1 = transaction_struct("1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464")
 tx2 = transaction_struct("cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873")
@@ -196,8 +221,6 @@ tx9 = transaction_struct("03b26944890929ff751653acb2f2af795cee38f937f379f52ed654
 tx10 = transaction_struct("163f9d874bf45bcce929f64cc69e816219b0f000e374076c1d3efe0a26ca6b6e")
 
 def first_case():
-
-
     exp_merkle = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     test_case_1a("1a.1", [], exp_merkle)
 
@@ -224,3 +247,41 @@ def first_case():
 
     exp_merkle = "9bce55c90dbd3c65086549d556feea84f4b022a6e9d9d29824e3daf237656906"
     test_case_1a("1a.9", [tx1, tx2, tx3, tx4, tx5], exp_merkle)
+
+def second_case():
+    test_case_1b("1b.1", tx1, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464", [], True)
+    test_case_1b("1b.2", tx1, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873")], True)
+    test_case_1b("1b.3", tx2, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d",
+                 [(1, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464")], True)
+    test_case_1b("1b.4", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873"),
+                  (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a37fd")], True)
+    test_case_1b("1b.5", tx3, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317",
+                 [(0, "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"),
+                  (1, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d")], True)
+    test_case_1b("1b.6", tx6, "a1095d369acb94778091ceccbb75719ae5f9941107d1f965174c6aebcb48d631",
+                 [(1, "19581e27de7ced00ff1ce50b2047e7a567c76b1cbaebabe5ef03f7c3017bb5b7"),
+                  (0, "96511d2d18696af94fc302da346d749fbbd99181c0dbe668a57f2fe92f18d580"),
+                  (1, "1d61fc2b1cb988a0bddd5dc00f942e468c2957f8527a1189b79531b46680d852")], True)
+    test_case_1b("1b.7", tx1, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c474", [], False)
+    test_case_1b("1b.8", tx1, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d",
+                 [(1, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873")], False)
+    test_case_1b("1b.9", tx1, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef3653125",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873")], False)
+    test_case_1b("1b.10", tx2, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d",
+                 [(0, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464")], False)
+    test_case_1b("1b.11", tx2, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365313d",
+                 [(1, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464")], False)
+    test_case_1b("1b.12", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317",
+                 [(1, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873"),
+                  (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a37fd")], False)
+    test_case_1b("1b.13", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb874"),
+                  (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a37fd")], False)
+    test_case_1b("1b.14", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a317",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873"),
+                  (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a370d")], False)
+    test_case_1b("1b.15", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a417",
+                 [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873"),
+                  (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a37fd")], False)
