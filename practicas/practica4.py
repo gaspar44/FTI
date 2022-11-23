@@ -183,9 +183,41 @@ def UAB_validate_inclusion_simplified(tx, merkle_root, merkle_path):
         start_node = parent_node
 
     return start_node.transaction_hash == merkle_root
+
+
+from datetime import datetime
+
+def UAB_blockchain_mine(blk_chain, tx_list, target=MAX_TARGET):
+    header = block_header_struct()
+    header.time = datetime.now()
+    copy_list = tx_list.copy()  # To no alterate the original list
+    header.merkle_root = UAB_compute_merkle_root(copy_list)
+    header.nonce = 0
+    header.target = target
+
+    candidate_to_previous = blk_chain.get_blocks()
+    if len(candidate_to_previous) == 0:
+        header.previous_block_hash = None
+    else:
+        header.previous_block_hash = candidate_to_previous[-1].get_hash()
+
+    new_block = block_struct()
+    new_block.txs = tx_list
+    new_block.block_header = header
+    hash_to_calculate = header.serialize()
+    hash_to_calculate = UAB_btc_hash(hash_to_calculate)
+    integer_hash = UAB_hexString_to_int(hash_to_calculate)
+
+    while integer_hash >= UAB_hexString_to_int(target):
+        header.nonce += 1
+        hash_to_calculate = header.serialize()
+        hash_to_calculate = UAB_btc_hash(hash_to_calculate)
+        integer_hash = UAB_hexString_to_int(hash_to_calculate)
+
+    blk_chain.add_block(new_block)
+    return blk_chain
 def UAB_compute_merkle_root(tx_list):
-    actual_list = tx_list
-    n = len(actual_list)
+    n = len(tx_list)
     if n == 0:
         return UAB_btc_hash("")
 
@@ -193,12 +225,12 @@ def UAB_compute_merkle_root(tx_list):
         return tx_list[0].transaction_hash
 
     elif n & (n - 1) != 0:
-        n = len(actual_list)
+        n = len(tx_list)
         while n & (n - 1) != 0:
-            actual_list.append(actual_list[n - 1])
-            n = len(actual_list)
+            tx_list.append(tx_list[n - 1])
+            n = len(tx_list)
 
-    return UAB_create_tree(actual_list).transaction_hash
+    return UAB_create_tree(tx_list).transaction_hash
 
 def test_case_1a(name, tx_list, exp_merkle):
     merkle = UAB_compute_merkle_root(tx_list)
@@ -248,6 +280,21 @@ def first_case():
     exp_merkle = "9bce55c90dbd3c65086549d556feea84f4b022a6e9d9d29824e3daf237656906"
     test_case_1a("1a.9", [tx1, tx2, tx3, tx4, tx5], exp_merkle)
 
+
+def test_case_2(name, current_blkchain, tx_list, target, exp_result):
+    blk_chain = UAB_blockchain_mine(current_blkchain, tx_list, target=target)
+    t1 = (len(blk_chain.get_blocks()) == exp_result["num_blocks"])
+    blk = blk_chain.get_blocks()[-1]
+    t2 = blk.txs == exp_result["tx_list"]
+    t3 = blk.block_header.previous_block_hash == exp_result["previous_block_hash"]
+    t4 = blk.block_header.merkle_root == exp_result["merkle_root"]
+    t5 = blk.block_header.time != None
+    t6 = blk.block_header.target == exp_result["target"]
+    t7 = UAB_hexString_to_int(blk.get_hash()) <= UAB_hexString_to_int(target)
+    print("Test", name + ":", t1 & t2 & t3 & t4 & t5 & t6 & t7)
+
+    return blk_chain
+
 def second_case():
     test_case_1b("1b.1", tx1, "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464", [], True)
     test_case_1b("1b.2", tx1, "ad3ee4ac443155d71fa2cd251075c50dda10a3991ffea21ea264400ef365312d",
@@ -285,3 +332,37 @@ def second_case():
     test_case_1b("1b.15", tx1, "33bbe18031d03aa444e5ce1426d8a992e83210d77af4fec16ef32e779987a417",
                  [(0, "cf3bae39dd692048a8bf961182e6a34dfd323eeb0748e162eaf055107f1cb873"),
                   (0, "3eff7c5314a5ed2d5d8fdad16bbc4851cd98b9861c950854246318c5576a37fd")], False)
+
+def third_case():
+    try:
+        blk_chain_0 = blockchain_struct()
+
+        exp_result = {"num_blocks": 1, "tx_list": [], "previous_block_hash": None,
+                      "merkle_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                      "target": MAX_TARGET}
+        blk_chain_1 = test_case_2("2.1", blk_chain_0, [], MAX_TARGET, exp_result)
+
+        exp_result = {"num_blocks": 2, "tx_list": [tx1], "previous_block_hash": blk_chain_1.get_blocks()[-1].get_hash(),
+                      "merkle_root": "1bad6b8cf97131fceab8543e81f7757195fbb1d36b376ee994ad1cf17699c464",
+                      "target": MAX_TARGET}
+        blk_chain_2 = test_case_2("2.2", blk_chain_1, [tx1], MAX_TARGET, exp_result)
+
+        exp_result = {"num_blocks": 3, "tx_list": [tx2, tx3, tx4],
+                      "previous_block_hash": blk_chain_2.get_blocks()[-1].get_hash(),
+                      "merkle_root": "bc139c7223903cd0e309d58613198787ba25bfd860120bae59472e9af4371520",
+                      "target": "00" + "F" * 62}
+        blk_chain_3 = test_case_2("2.3", blk_chain_2, [tx2, tx3, tx4], "00" + "F" * 62, exp_result)
+
+        exp_result = {"num_blocks": 4, "tx_list": [tx5], "previous_block_hash": blk_chain_3.get_blocks()[-1].get_hash(),
+                      "merkle_root": "19581e27de7ced00ff1ce50b2047e7a567c76b1cbaebabe5ef03f7c3017bb5b7",
+                      "target": "00" + "F" * 62}
+        blk_chain_4 = test_case_2("2.4", blk_chain_3, [tx5], "00" + "F" * 62, exp_result)
+
+        exp_result = {"num_blocks": 5, "tx_list": [tx6, tx7, tx8, tx9],
+                      "previous_block_hash": blk_chain_4.get_blocks()[-1].get_hash(),
+                      "merkle_root": "380139b9b93884139aaf8362830e8754f7f59788cfbe874fdb46985bbf45bdf4",
+                      "target": "00" + "F" * 62}
+        blk_chain_5 = test_case_2("2.5", blk_chain_4, [tx6, tx7, tx8, tx9], "00" + "F" * 62, exp_result)
+
+    except Exception as e:
+        print("Test", "2X" + ":", False)
