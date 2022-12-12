@@ -78,6 +78,48 @@ def int_from_bytes(binary_data: bytes):
     return int.from_bytes(binary_data, byteorder='big', signed=True)
 
 
+#Message to sign
+MESSAGE = "Uranium from conflict areas"
+NUMBER_OF_EMPLOYEES = 4
+
+#Public key (pkSigner) and private key (skSigner) of the signer.
+signer_key_pair = UAB_generate_RSA_key_pair(1024)
+signer_private_key = signer_key_pair[1]
+signer_public_key = signer_key_pair[0]
+
+
+publicKeysGroup = [None] * NUMBER_OF_EMPLOYEES
+employee_number = 3
+publicKeysGroup[employee_number] = signer_public_key
+
+for i in range(NUMBER_OF_EMPLOYEES):
+    if employee_number != i:
+        public_key = UAB_generate_RSA_public_key(1024)
+        publicKeysGroup[i] = public_key
+
+max_n_of_public_keys = 0
+
+for i in range(NUMBER_OF_EMPLOYEES):
+    if publicKeysGroup[i][0] > max_n_of_public_keys:
+        max_n_of_public_keys = publicKeysGroup[i][0]
+
+v = Integer(2)
+
+while v < max_n_of_public_keys:
+    bits = randint(1, 2048)
+    v = v ** bits
+
+xs = [None] * NUMBER_OF_EMPLOYEES
+ys = [None] * NUMBER_OF_EMPLOYEES
+
+for i in range(NUMBER_OF_EMPLOYEES):
+    if employee_number != i:
+        xi = randint(1024, 5000000)
+        xs[i] = xi
+        ys[i] = UAB_f(publicKeysGroup[i], xi)
+
+
+
 def test_case_1a_E(name, cases):
     res = True
     for case in cases:
