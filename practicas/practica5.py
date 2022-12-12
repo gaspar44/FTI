@@ -119,6 +119,13 @@ for i in range(NUMBER_OF_EMPLOYEES):
         ys[i] = UAB_f(publicKeysGroup[i], xi)
 
 
+def UAB_solve_C(k, v, ys):
+    res = None
+    #### IMPLEMENTATION GOES HERE ####
+
+    ##################################
+
+    return res
 
 def test_case_1a_E(name, cases):
     res = True
@@ -152,6 +159,29 @@ def test_case_1a_f_inv(name, numTries):
 
     print("Test", name + ":", res)
 
+def test_case_2a(name, cases):
+    res = True
+    for case in cases:
+        m = case[0]
+        k = UAB_h(m)
+        v = case[1]
+        xs = case[3]
+        pks = case[4]
+        ys = []
+        for i,pk in enumerate(pks):
+            if xs[i] is None:
+                ys = ys + [None]
+            else:
+                ys = ys + [UAB_f(pk,xs[i])]
+
+        expectedC = case[6]
+        c = UAB_solve_C(k,v,ys)
+        res = res & (expectedC==c)
+    print("Test", name + ":", res)
+
+def ejercicio_2():
+    test_case_2a("2a.1", TEST_CASES_2)
+    test_case_2a("2a.2", TEST_CASES_GOOD_SIMPLE)
 def ejercicio_1a():
     test_case_1a_E("1a.1", TEST_CASE_1)
     test_case_1a_f("1a.2", TEST_CASE_1a_f)
