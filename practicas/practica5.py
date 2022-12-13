@@ -131,7 +131,7 @@ def UAB_solve_C(k, v, ys):
 
     decrypted_ring_side_y = 0
     xor_value = v
-    for i in range (len(ys) - 1, index_of_the_none_value, -1):
+    for i in range(len(ys) - 1, index_of_the_none_value, -1):
         decrypted_ring_side_y = UAB_E(xor_value, k)
         xor_value = UAB_xor(decrypted_ring_side_y, ys[i])
 
@@ -139,7 +139,7 @@ def UAB_solve_C(k, v, ys):
         decrypted_ring_side_y = UAB_E(xor_value, k)
         return UAB_xor(decrypted_ring_side_y, v)
 
-    # This is using xor_value because at the last iteration it does not update the value
+    # This is using xor_value because at the last iteration it does not update the value.
     return UAB_xor(encrypted_ring_side_y, xor_value)
 
 
