@@ -67,7 +67,7 @@ def UAB_f_inv(SK, y):
     converted = Integer(y)
     d = SK[1]
     n = SK[0]
-    return y.powermod(d, n)
+    return converted.powermod(d, n)
 
 
 def int_to_bytes(number: int):
@@ -142,6 +142,21 @@ def UAB_solve_C(k, v, ys):
     # This is using xor_value because at the last iteration it does not update the value.
     return UAB_xor(encrypted_ring_side_y, xor_value)
 
+def UAB_sign_ring_simple(m, v, xs, publicKeysGroup, skSigner):
+    encrypted_ys = [None] * len(xs)
+    signer_number = None
+    hash_message = UAB_h(m)
+
+    for i in range(len(xs)):
+        if xs[i] is not None:
+            encrypted_ys[i] = UAB_f(publicKeysGroup[i],xs[i])
+        else:
+            signer_number = i
+
+    remaining_ys = UAB_solve_C(hash_message,v, encrypted_ys)
+    xs[signer_number] = UAB_f_inv(skSigner, remaining_ys)
+
+    return (publicKeysGroup, v, xs)
 
 def test_case_1a_E(name, cases):
     res = True
@@ -195,6 +210,19 @@ def test_case_2a(name, cases):
         res = res & (expectedC==c)
     print("Test", name + ":", res)
 
+def test_case_2b(name, cases):
+    res = True
+    for case in cases:
+        m = case[0]
+        v = case[1]
+        xs = case[3]
+        pks = case[4]
+        skSigner = case[5]
+        expectedSigma = case[7]
+        sigma = UAB_sign_ring_simple(m,v,xs,pks,skSigner)
+        res = res & (expectedSigma==sigma)
+    print("Test", name + ":", res)
+
 def ejercicio_1a():
     test_case_1a_E("1a.1", TEST_CASE_1)
     test_case_1a_f("1a.2", TEST_CASE_1a_f)
@@ -203,3 +231,5 @@ def ejercicio_1a():
 def ejercicio_2():
     test_case_2a("2a.1", TEST_CASES_2)
     test_case_2a("2a.2", TEST_CASES_GOOD_SIMPLE)
+    test_case_2b("2b.1", TEST_CASES_2)
+    test_case_2b("2b.2", TEST_CASES_GOOD_SIMPLE)
