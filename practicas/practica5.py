@@ -120,12 +120,28 @@ for i in range(NUMBER_OF_EMPLOYEES):
 
 
 def UAB_solve_C(k, v, ys):
-    res = None
-    #### IMPLEMENTATION GOES HERE ####
+    index_of_the_none_value = 0
+    xor_value = v
+    encrypted_ring_side_y = 0
 
-    ##################################
+    while ys[index_of_the_none_value] is not None:
+        encrypted_ring_side_y = UAB_xor(xor_value, ys[index_of_the_none_value])
+        xor_value = UAB_E(k, encrypted_ring_side_y)
+        index_of_the_none_value += 1
 
-    return res
+    decrypted_ring_side_y = 0
+    xor_value = v
+    for i in range (len(ys) - 1, index_of_the_none_value, -1):
+        decrypted_ring_side_y = UAB_E(xor_value, k)
+        xor_value = UAB_xor(decrypted_ring_side_y, ys[i])
+
+    if ys[0] is None:  # v must be operated twice.
+        decrypted_ring_side_y = UAB_E(xor_value, k)
+        return UAB_xor(decrypted_ring_side_y, v)
+
+    # This is using xor_value because at the last iteration it does not update the value
+    return UAB_xor(encrypted_ring_side_y, xor_value)
+
 
 def test_case_1a_E(name, cases):
     res = True
@@ -179,12 +195,11 @@ def test_case_2a(name, cases):
         res = res & (expectedC==c)
     print("Test", name + ":", res)
 
-def ejercicio_2():
-    test_case_2a("2a.1", TEST_CASES_2)
-    test_case_2a("2a.2", TEST_CASES_GOOD_SIMPLE)
 def ejercicio_1a():
     test_case_1a_E("1a.1", TEST_CASE_1)
     test_case_1a_f("1a.2", TEST_CASE_1a_f)
     test_case_1a_f_inv("1a.3", 10)
 
-
+def ejercicio_2():
+    test_case_2a("2a.1", TEST_CASES_2)
+    test_case_2a("2a.2", TEST_CASES_GOOD_SIMPLE)
