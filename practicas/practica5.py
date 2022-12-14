@@ -307,4 +307,5 @@ def ejercicio_3b():
             xs[i] = xi
             ys[i] = UAB_f(publicKeysGroup[i], xi)
     ring = UAB_sign_ring_simple(MESSAGE,v,xs, publicKeysGroup, signer_private_key)
-    print(UAB_verify_ring_signature_simple(MESSAGE, ring))
+    is_valid = UAB_verify_ring_signature_simple(MESSAGE, ring)
+    print("Test 3b:", is_valid)
